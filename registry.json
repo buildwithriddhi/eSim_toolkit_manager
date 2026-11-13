@@ -1,0 +1,28 @@
+{
+  "esim_root_candidates": [
+    "C:/FOSSEE/eSim"
+  ],
+  "tools": {
+    "ngspice": {
+      "description": "Circuit simulator",
+      "relative_paths": ["tools/ngspice/bin/ngspice_con.exe"],
+      "version_args": ["--version"],
+      "version_pattern": "ngspice-?\\s*(\\d+(?:\\.\\d+)*)",
+      "required_version": null
+    },
+    "kicad-cli": {
+      "description": "KiCad command-line tool",
+      "relative_paths": ["tools/kicad/bin/kicad-cli.exe"],
+      "version_args": ["--version"],
+      "version_pattern": "(\\d+\\.\\d+\\.\\d+)",
+      "required_version": null
+    },
+    "esim-python": {
+      "description": "Python bundled with eSim",
+      "relative_paths": ["python/python.exe"],
+      "version_args": ["--version"],
+      "version_pattern": "Python (\\d+\\.\\d+\\.\\d+)",
+      "required_version": null
+    }
+  }
+}
