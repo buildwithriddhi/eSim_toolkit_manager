@@ -27,5 +27,9 @@
       "minimum_version": "3.12.10",
       "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
     }
+  },
+  "environment_rules": {
+    "conflicting_path_keywords": ["mingw", "msys"],
+    "conflicting_software_keywords": ["orcad", "pspice", "winavr"]
   }
 }

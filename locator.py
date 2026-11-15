@@ -18,7 +18,7 @@ def read_value(key, name):
         return None
 
 
-def find_in_registry():
+def read_uninstall_entries():
     if sys.platform != "win32":
         return []
 
@@ -28,7 +28,7 @@ def find_in_registry():
         (winreg.HKEY_CURRENT_USER, UNINSTALL_KEY),
     ]
 
-    found = []
+    entries = []
     for hive, path in places:
         try:
             parent = winreg.OpenKey(hive, path)
@@ -42,20 +42,25 @@ def find_in_registry():
                     child_name = winreg.EnumKey(parent, index)
                     with winreg.OpenKey(parent, child_name) as child:
                         name = read_value(child, "DisplayName")
-                        if not name or not str(name).lower().startswith("esim"):
+                        if not name:
                             continue
                         location = read_value(child, "InstallLocation")
-                        if not location:
-                            continue
-                        found.append({
+                        entries.append({
                             "name": str(name),
                             "version": read_value(child, "DisplayVersion"),
-                            "location": str(location),
+                            "location": str(location) if location else None,
                         })
                 except OSError:
                     continue
-    return found
+    return entries
 
+
+def find_in_registry():
+    found = []
+    for entry in read_uninstall_entries():
+        if entry["name"].lower().startswith("esim") and entry["location"]:
+            found.append(entry)
+    return found
 
 def looks_like_esim(folder):
     folder = Path(folder)

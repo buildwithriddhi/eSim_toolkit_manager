@@ -2,6 +2,11 @@ import json
 import re
 import subprocess
 from pathlib import Path
+
+from checks import (
+    Check, OK, WARNING, PROBLEM,
+    check_install_path, check_path_for_conflicts, check_conflicting_software,
+)
 from locator import find_esim_root
 from versions import check_version
 
@@ -44,27 +49,69 @@ def get_version(path, args, pattern):
     return "version not recognised", None
 
 
-def main():
+def check_tool(name, tool, root):
+    path = locate_tool(tool, root)
+    if path is None:
+        return Check(
+            name, PROBLEM, "Not found in the eSim folder.",
+            "Repair or reinstall eSim.",
+        )
+
+    status, version = get_version(path, tool["version_args"], tool["version_pattern"])
+    if version is None:
+        return Check(
+            name, WARNING, f"Found at {path}, but its version could not be read ({status}).",
+            "Run the tool by hand to check that it starts.",
+        )
+
+    verdict = check_version(version, tool.get("minimum_version"))
+    if verdict == "OK":
+        return Check(name, OK, f"Version {version} at {path}")
+    if verdict.startswith("OUTDATED"):
+        return Check(
+            name, PROBLEM, f"Version {version} is too old. {verdict}",
+            "Update this tool, or reinstall eSim.",
+        )
+    return Check(name, WARNING, f"Version {version}: {verdict}.")
+
+
+def run_all_checks():
     tools = load_tools()
     root, source = find_esim_root(tools)
 
     if root is None:
-        print("eSim installation folder not found.")
-        return
-    print(f"eSim root: {root}  (found via {source})\n")
+        return [Check(
+            "eSim installation", PROBLEM, "The eSim folder could not be found.",
+            "Install eSim, or tell this program where it is.",
+        )]
+
+    results = [Check("eSim installation", OK, f"Found at {root} (found via {source}).")]
+    results.append(check_install_path(root))
 
     for name, tool in tools["tools"].items():
-        path = locate_tool(tool, root)
-        if path is None:
-            print(f"{name:12} NOT INSTALLED")
-            continue
-        status, version = get_version(path, tool["version_args"], tool["version_pattern"])
-        if version is None:
-            print(f"{name:12} {status}")
-            continue
-        verdict = check_version(version, tool.get("minimum_version"))
-        print(f"{name:12} {version:10} {verdict}")
+        results.append(check_tool(name, tool, root))
+
+    rules = tools["environment_rules"]
+    results.append(check_path_for_conflicts(rules["conflicting_path_keywords"]))
+    results.append(check_conflicting_software(rules["conflicting_software_keywords"]))
+    return results
+
+
+def print_report(results):
+    for check in results:
+        print(f"[{check.status:<7}] {check.name}: {check.message}")
+        if check.fix and check.status != OK:
+            print(f"           Fix: {check.fix}")
+
+    problems = sum(1 for c in results if c.status == PROBLEM)
+    warnings = sum(1 for c in results if c.status == WARNING)
+    print(f"\n{len(results)} checks: {problems} problem(s), {warnings} warning(s).")
+
+
+def main():
+    print_report(run_all_checks())
 
 
 if __name__ == "__main__":
     main()
+
