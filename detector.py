@@ -3,6 +3,7 @@ import re
 import subprocess
 from pathlib import Path
 from locator import find_esim_root
+from versions import check_version
 
 TOOLS_FILE = Path(__file__).parent / "tools.json"
 
@@ -58,8 +59,11 @@ def main():
             print(f"{name:12} NOT INSTALLED")
             continue
         status, version = get_version(path, tool["version_args"], tool["version_pattern"])
-        shown = version if version else status
-        print(f"{name:12} {shown:10} {path}")
+        if version is None:
+            print(f"{name:12} {status}")
+            continue
+        verdict = check_version(version, tool.get("minimum_version"))
+        print(f"{name:12} {version:10} {verdict}")
 
 
 if __name__ == "__main__":

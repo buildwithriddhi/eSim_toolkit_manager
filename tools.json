@@ -8,21 +8,24 @@
       "relative_paths": ["tools/ngspice/bin/ngspice_con.exe"],
       "version_args": ["--version"],
       "version_pattern": "ngspice-?\\s*(\\d+(?:\\.\\d+)*)",
-      "required_version": null
+      "minimum_version": "45.2",
+      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
     },
     "kicad-cli": {
       "description": "KiCad command-line tool",
       "relative_paths": ["tools/kicad/bin/kicad-cli.exe"],
       "version_args": ["--version"],
       "version_pattern": "(\\d+\\.\\d+\\.\\d+)",
-      "required_version": null
+      "minimum_version": "9.0.3",
+      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
     },
     "esim-python": {
       "description": "Python bundled with eSim",
       "relative_paths": ["python/python.exe"],
       "version_args": ["--version"],
       "version_pattern": "Python (\\d+\\.\\d+\\.\\d+)",
-      "required_version": null
+      "minimum_version": "3.12.10",
+      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
     }
   }
 }

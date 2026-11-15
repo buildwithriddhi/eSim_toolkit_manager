@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -76,6 +77,11 @@ def find_esim_root(config, user_path=None):
 
     for candidate in config["esim_root_candidates"]:
         attempts.append(("default location", candidate))
+    
+    if __name__=="__main__":
+        print("This is the list of possible paths :")
+        for source, folder in attempts:
+            print(source,folder)
 
     for source, folder in attempts:
         if looks_like_esim(folder):
@@ -85,5 +91,19 @@ def find_esim_root(config, user_path=None):
 
 
 if __name__ == "__main__":
-    for entry in find_in_registry():
-        print(entry)
+    TOOLS_FILE = Path(__file__).parent / "tools.json"
+    with open(TOOLS_FILE, encoding="utf-8") as f:
+        tools= json.load(f)
+        for entry in find_in_registry():
+            print(entry)
+
+
+    print("\nSearching for eSim root...")
+
+    root, source = find_esim_root(tools)
+
+    if root:
+        print("eSim found at:", root)
+        print("Found using:", source)
+    else:
+        print("eSim installation not found.")
