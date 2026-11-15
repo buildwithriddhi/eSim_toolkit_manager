@@ -2,6 +2,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from locator import find_esim_root
 
 TOOLS_FILE = Path(__file__).parent / "tools.json"
 
@@ -9,13 +10,6 @@ TOOLS_FILE = Path(__file__).parent / "tools.json"
 def load_tools():
     with open(TOOLS_FILE, encoding="utf-8") as f:
         return json.load(f)
-
-
-def find_esim_root(tools):
-    for candidate in tools["esim_root_candidates"]:
-        if Path(candidate).is_dir():
-            return Path(candidate)
-    return None
 
 
 def locate_tool(tool, root):
@@ -51,12 +45,12 @@ def get_version(path, args, pattern):
 
 def main():
     tools = load_tools()
-    root = find_esim_root(tools)
+    root, source = find_esim_root(tools)
 
     if root is None:
         print("eSim installation folder not found.")
         return
-    print(f"eSim root: {root}\n")
+    print(f"eSim root: {root}  (found via {source})\n")
 
     for name, tool in tools["tools"].items():
         path = locate_tool(tool, root)

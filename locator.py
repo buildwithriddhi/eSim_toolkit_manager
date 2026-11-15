@@ -1,0 +1,89 @@
+import os
+import sys
+from pathlib import Path
+
+if sys.platform == "win32":
+    import winreg
+
+UNINSTALL_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+UNINSTALL_KEY_32BIT = r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+
+
+def read_value(key, name):
+    try:
+        value, _value_type = winreg.QueryValueEx(key, name)
+        return value
+    except OSError:
+        return None
+
+
+def find_in_registry():
+    if sys.platform != "win32":
+        return []
+
+    places = [
+        (winreg.HKEY_LOCAL_MACHINE, UNINSTALL_KEY),
+        (winreg.HKEY_LOCAL_MACHINE, UNINSTALL_KEY_32BIT),
+        (winreg.HKEY_CURRENT_USER, UNINSTALL_KEY),
+    ]
+
+    found = []
+    for hive, path in places:
+        try:
+            parent = winreg.OpenKey(hive, path)
+        except OSError:
+            continue
+
+        with parent:
+            number_of_subkeys = winreg.QueryInfoKey(parent)[0]
+            for index in range(number_of_subkeys):
+                try:
+                    child_name = winreg.EnumKey(parent, index)
+                    with winreg.OpenKey(parent, child_name) as child:
+                        name = read_value(child, "DisplayName")
+                        if not name or not str(name).lower().startswith("esim"):
+                            continue
+                        location = read_value(child, "InstallLocation")
+                        if not location:
+                            continue
+                        found.append({
+                            "name": str(name),
+                            "version": read_value(child, "DisplayVersion"),
+                            "location": str(location),
+                        })
+                except OSError:
+                    continue
+    return found
+
+
+def looks_like_esim(folder):
+    folder = Path(folder)
+    return (folder / "eSim.exe").is_file() and (folder / "tools").is_dir()
+
+
+def find_esim_root(config, user_path=None):
+    attempts = []
+
+    if user_path:
+        attempts.append(("user setting", user_path))
+
+    from_env = os.environ.get("ESIM_ROOT")
+    if from_env:
+        attempts.append(("ESIM_ROOT variable", from_env))
+
+    for entry in find_in_registry():
+        attempts.append(("Windows registry", entry["location"]))
+
+    for candidate in config["esim_root_candidates"]:
+        attempts.append(("default location", candidate))
+
+    for source, folder in attempts:
+        if looks_like_esim(folder):
+            return Path(folder), source
+
+    return None, None
+
+
+if __name__ == "__main__":
+    for entry in find_in_registry():
+        print(entry)
