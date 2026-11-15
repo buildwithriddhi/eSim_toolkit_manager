@@ -3,16 +3,16 @@ import re
 import subprocess
 from pathlib import Path
 
-REGISTRY_FILE = Path(__file__).parent / "registry.json"
+TOOLS_FILE = Path(__file__).parent / "tools.json"
 
-
-def load_registry():
-    with open(REGISTRY_FILE, encoding="utf-8") as f:
+#this function is opening the json file and returning that data in it in form of python dictionary so it can be referenced later
+def load_tools():
+    with open(TOOLS_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
-def find_esim_root(registry):
-    for candidate in registry["esim_root_candidates"]:
+def find_esim_root(tools):
+    for candidate in tools["esim_root_candidates"]:
         if Path(candidate).is_dir():
             return Path(candidate)
     return None
@@ -50,15 +50,15 @@ def get_version(path, args, pattern):
 
 
 def main():
-    registry = load_registry()
-    root = find_esim_root(registry)
+    tools = load_tools()
+    root = find_esim_root(tools)
 
     if root is None:
         print("eSim installation folder not found.")
         return
     print(f"eSim root: {root}\n")
 
-    for name, tool in registry["tools"].items():
+    for name, tool in tools["tools"].items():
         path = locate_tool(tool, root)
         if path is None:
             print(f"{name:12} NOT INSTALLED")
