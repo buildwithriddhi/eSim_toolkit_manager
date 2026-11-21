@@ -16,18 +16,6 @@ def is_at_least(found, minimum):
     b = b + (0,) * (length - len(b))
     return a >= b
 
-
-def check_version(found, minimum):
-    if minimum is None:
-        return "no minimum set"
-    result = is_at_least(found, minimum)
-    if result is None:
-        return "could not compare"
-    if result:
-        return "OK"
-    return f"OUTDATED (need {minimum} or newer)"
-
-
 def check_exact_version(found, expected):
     # Equal means "at least" in both directions (so 45.2 and 45.2.0 match).
     same = is_at_least(found, expected) and is_at_least(expected, found)
