@@ -8,7 +8,8 @@ from checks import (
     check_install_path, check_path_for_conflicts, check_conflicting_software,
 )
 from locator import find_esim_root
-from versions import check_version
+from versions import check_exact_version
+from manifest import sync_tools_json, ManifestError
 
 TOOLS_FILE = Path(__file__).parent / "tools.json"
 
@@ -64,28 +65,49 @@ def check_tool(name, tool, root):
             "Run the tool by hand to check that it starts.",
         )
 
-    verdict = check_version(version, tool.get("minimum_version"))
+    required = tool.get("required_version")
+    if not required:
+        return Check(
+            name, PROBLEM, "No required version is saved in tools.json.",
+            "Run 'python manifest.py sync' while online.",
+        )
+
+    verdict = check_exact_version(version, required)
     if verdict == "OK":
         return Check(name, OK, f"Version {version} at {path}")
-    if verdict.startswith("OUTDATED"):
+    if verdict.startswith("WRONG"):
         return Check(
-            name, PROBLEM, f"Version {version} is too old. {verdict}",
-            "Update this tool, or reinstall eSim.",
+            name, PROBLEM,
+            f"Found version {version}, but eSim needs exactly {required}.",
+            f"Install {name} {required}, or reinstall eSim.",
         )
     return Check(name, WARNING, f"Version {version}: {verdict}.")
 
 
 def run_all_checks():
+    # Refresh tools.json from GitHub. If we're offline, carry on with the
+    # versions already saved in tools.json from the last successful sync.
+    results = []
+    try:
+        sync_tools_json()
+    except ManifestError as error:
+        results.append(Check(
+            "Required versions", WARNING,
+            f"Could not update from GitHub ({error}). "
+            "Using the versions saved in tools.json.",
+        ))
+
     tools = load_tools()
     root, source = find_esim_root(tools)
 
     if root is None:
-        return [Check(
+        results.append(Check(
             "eSim installation", PROBLEM, "The eSim folder could not be found.",
             "Install eSim, or tell this program where it is.",
-        )]
+        ))
+        return results
 
-    results = [Check("eSim installation", OK, f"Found at {root} (found via {source}).")]
+    results.append(Check("eSim installation", OK, f"Found at {root} (found via {source})."))
     results.append(check_install_path(root))
 
     for name, tool in tools["tools"].items():
@@ -114,4 +136,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

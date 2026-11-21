@@ -26,3 +26,13 @@ def check_version(found, minimum):
     if result:
         return "OK"
     return f"OUTDATED (need {minimum} or newer)"
+
+
+def check_exact_version(found, expected):
+    # Equal means "at least" in both directions (so 45.2 and 45.2.0 match).
+    same = is_at_least(found, expected) and is_at_least(expected, found)
+    if same:
+        return "OK"
+    if is_at_least(found, expected) is None:
+        return "could not compare"
+    return f"WRONG VERSION (need exactly {expected})"

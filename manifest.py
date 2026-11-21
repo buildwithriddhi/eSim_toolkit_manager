@@ -14,10 +14,14 @@ Standard library only, so there is nothing extra to install.
 
 import hashlib
 import json
+import os
 import re
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+# tools.json sits next to this file (same folder as detector.py).
+TOOLS_FILE = Path(__file__).parent / "tools.json"
 
 # Which eSim release to read the manifest from. Use a tag, not "master",
 # because master moves and would change your baseline without warning.
@@ -137,6 +141,45 @@ def load_requirements(ref=DEFAULT_REF, timeout=10):
 
 
 # ----------------------------------------------------------------------------
+# 3b. Writing the manifest values into tools.json
+# ----------------------------------------------------------------------------
+
+def sync_tools_json(ref=DEFAULT_REF, timeout=10, tools_file=TOOLS_FILE):
+    """
+    Fetch the manifest and save its values into tools.json.
+
+    For every tool that appears in both files it writes:
+        required_version, download_url, filename, sha256, required_version_source
+    and removes the old hardcoded minimum_version fields.
+
+    The file is written to a temporary name first and then swapped in, so a
+    crash halfway can never leave tools.json half-written.
+    If GitHub can't be reached, ManifestError is raised and tools.json is
+    left exactly as it was.
+    """
+    requirements = load_requirements(ref, timeout)
+    tools_file = Path(tools_file)
+    config = json.loads(tools_file.read_text(encoding="utf-8"))
+
+    for tool_name, info in requirements.items():
+        tool = config["tools"].get(tool_name)
+        if tool is None:
+            continue  # tool is in the manifest but not tracked in tools.json
+        tool.pop("minimum_version", None)
+        tool.pop("minimum_version_source", None)
+        tool["required_version"] = info["version"]
+        tool["download_url"] = info["url"]
+        tool["filename"] = info["filename"]
+        tool["sha256"] = info["sha256"]
+        tool["required_version_source"] = f"eSim {ref} windows/deps-manifest.json"
+
+    temp_file = tools_file.with_name(tools_file.name + ".tmp")
+    temp_file.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp_file, tools_file)
+    return requirements
+
+
+# ----------------------------------------------------------------------------
 # 4. Downloading with sha256 verification
 # ----------------------------------------------------------------------------
 
@@ -206,10 +249,15 @@ def download_verified(url, destination, expected_sha256, timeout=30):
 if __name__ == "__main__":
     import sys
 
-    ref = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_REF
+    # python manifest.py          -> just print what the manifest says
+    # python manifest.py sync     -> also save it into tools.json
+    args = [a for a in sys.argv[1:] if a != "sync"]
+    do_sync = "sync" in sys.argv[1:]
+    ref = args[0] if args else DEFAULT_REF
+
     print(f"Fetching manifest from eSim ref '{ref}' ...")
     try:
-        requirements = load_requirements(ref)
+        requirements = sync_tools_json(ref) if do_sync else load_requirements(ref)
     except ManifestError as error:
         print("FAILED:", error)
         sys.exit(1)
@@ -220,3 +268,6 @@ if __name__ == "__main__":
         print(f"  file    : {info['filename']}")
         print(f"  sha256  : {info['sha256']}")
         print(f"  url     : {info['url']}")
+
+    if do_sync:
+        print(f"\nSaved into {TOOLS_FILE}")

@@ -5,31 +5,59 @@
   "tools": {
     "ngspice": {
       "description": "Circuit simulator",
-      "relative_paths": ["tools/ngspice/bin/ngspice_con.exe"],
-      "version_args": ["--version"],
+      "relative_paths": [
+        "tools/ngspice/bin/ngspice_con.exe"
+      ],
+      "version_args": [
+        "--version"
+      ],
       "version_pattern": "ngspice-?\\s*(\\d+(?:\\.\\d+)*)",
-      "minimum_version": "45.2",
-      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
+      "required_version": "45.2",
+      "download_url": "https://sourceforge.net/projects/ngspice/files/ng-spice-rework/old-releases/45.2/ngspice-45.2_64.7z/download",
+      "filename": "ngspice-45.2_64.7z",
+      "sha256": "6a0c44056e7f2aae9bd6b3f5a74d1846fcf1e5d4470b01a89429629cfd0a0942",
+      "required_version_source": "eSim v2.6 windows/deps-manifest.json"
     },
     "kicad-cli": {
       "description": "KiCad command-line tool",
-      "relative_paths": ["tools/kicad/bin/kicad-cli.exe"],
-      "version_args": ["--version"],
+      "relative_paths": [
+        "tools/kicad/bin/kicad-cli.exe"
+      ],
+      "version_args": [
+        "--version"
+      ],
       "version_pattern": "(\\d+\\.\\d+\\.\\d+)",
-      "minimum_version": "9.0.3",
-      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
+      "required_version": "9.0.3",
+      "download_url": "https://downloads.kicad.org/kicad/windows/explore/stable/download/kicad-9.0.3-x86_64.exe",
+      "filename": "kicad-9.0.3-x86_64.exe",
+      "sha256": "582635ced8552c07e043ce9f2eba01dc0c42c96dcb87ce12ba85db1530da593f",
+      "required_version_source": "eSim v2.6 windows/deps-manifest.json"
     },
     "esim-python": {
       "description": "Python bundled with eSim",
-      "relative_paths": ["python/python.exe"],
-      "version_args": ["--version"],
+      "relative_paths": [
+        "python/python.exe"
+      ],
+      "version_args": [
+        "--version"
+      ],
       "version_pattern": "Python (\\d+\\.\\d+\\.\\d+)",
-      "minimum_version": "3.12.10",
-      "minimum_version_source": "baseline: shipped with eSim 2.6 installer"
+      "required_version": "3.12.10",
+      "download_url": "https://www.nuget.org/api/v2/package/python/3.12.10",
+      "filename": "python-3.12.10.nupkg",
+      "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+      "required_version_source": "eSim v2.6 windows/deps-manifest.json"
     }
   },
   "environment_rules": {
-    "conflicting_path_keywords": ["mingw", "msys"],
-    "conflicting_software_keywords": ["orcad", "pspice", "winavr"]
+    "conflicting_path_keywords": [
+      "mingw",
+      "msys"
+    ],
+    "conflicting_software_keywords": [
+      "orcad",
+      "pspice",
+      "winavr"
+    ]
   }
 }
