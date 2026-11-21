@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 import subprocess
@@ -7,9 +8,9 @@ from checks import (
     Check, OK, WARNING, PROBLEM,
     check_install_path, check_path_for_conflicts, check_conflicting_software,
 )
-from locator import find_esim_root
+from locator import find_esim_root, looks_like_esim
 from versions import check_exact_version
-from manifest import sync_tools_json, ManifestError
+from manifest import sync_tools_json, ManifestError, DEFAULT_REF
 
 TOOLS_FILE = Path(__file__).parent / "tools.json"
 
@@ -84,26 +85,62 @@ def check_tool(name, tool, root):
     return Check(name, WARNING, f"Version {version}: {verdict}.")
 
 
-def run_all_checks():
-    # Refresh tools.json from GitHub. If we're offline, carry on with the
-    # versions already saved in tools.json from the last successful sync.
+def normalise_ref(version):
+    # Users type "2.6"; the git tag is "v2.6". Accept both.
+    version = version.strip()
+    return version if version.lower().startswith("v") else "v" + version
+
+
+def saved_versions_are_for(ref, tools):
+    # tools.json remembers which eSim release its versions came from.
+    return all(
+        f"eSim {ref} " in tool.get("required_version_source", "")
+        for tool in tools["tools"].values()
+    )
+
+
+def run_all_checks(esim_version=None, esim_path=None):
     results = []
+
+    # 1. If the user gave a path, it must be a real eSim folder. We stop here
+    #    instead of quietly checking some other install.
+    if esim_path and not looks_like_esim(esim_path):
+        return [Check(
+            "eSim installation", PROBLEM,
+            f"'{esim_path}' does not look like an eSim folder "
+            "(it needs eSim.exe and a tools folder).",
+            "Check the path and try again.",
+        )]
+
+    # 2. Refresh tools.json from GitHub for the chosen eSim version. If we are
+    #    offline, use the saved versions, but only if they are for that version.
+    ref = normalise_ref(esim_version) if esim_version else DEFAULT_REF
     try:
-        sync_tools_json()
+        sync_tools_json(ref)
     except ManifestError as error:
-        results.append(Check(
-            "Required versions", WARNING,
-            f"Could not update from GitHub ({error}). "
-            "Using the versions saved in tools.json.",
-        ))
+        if saved_versions_are_for(ref, load_tools()):
+            results.append(Check(
+                "Required versions", WARNING,
+                f"Could not update from GitHub ({error}). "
+                f"Using the versions saved in tools.json (for eSim {ref}).",
+            ))
+        else:
+            return [Check(
+                "Required versions", PROBLEM,
+                f"Could not get the required versions for eSim {ref} ({error}). "
+                "The versions saved in tools.json are for a different eSim "
+                "version, so they were not used.",
+                "Check your internet connection and the version number "
+                "(eSim 2.6 is the earliest release that publishes this list).",
+            )]
 
     tools = load_tools()
-    root, source = find_esim_root(tools)
+    root, source = find_esim_root(tools, esim_path)
 
     if root is None:
         results.append(Check(
             "eSim installation", PROBLEM, "The eSim folder could not be found.",
-            "Install eSim, or tell this program where it is.",
+            'Run again with the path: python detector.py --esim-path "C:\\path\\to\\eSim"',
         ))
         return results
 
@@ -131,7 +168,17 @@ def print_report(results):
 
 
 def main():
-    print_report(run_all_checks())
+    parser = argparse.ArgumentParser(description="Check an eSim installation.")
+    parser.add_argument(
+        "--esim-version",
+        help="eSim release to take the required versions from, e.g. 2.6 (default: 2.6)",
+    )
+    parser.add_argument(
+        "--esim-path",
+        help='eSim install folder, e.g. "D:\\eSim" (default: search automatically)',
+    )
+    args = parser.parse_args()
+    print_report(run_all_checks(args.esim_version, args.esim_path))
 
 
 if __name__ == "__main__":
