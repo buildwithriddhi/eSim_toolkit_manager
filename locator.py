@@ -92,6 +92,19 @@ def find_esim_root(config, user_path=None):
         if looks_like_esim(folder):
             return Path(folder), source
 
+    # Nothing found automatically, so let the user type the path.
+    # (Only when a person is at the keyboard, so scripts never hang.)
+    if sys.stdin.isatty():
+        print("\neSim was not found automatically.")
+        for _ in range(3):
+            typed = input("Enter the eSim folder path (or press Enter to skip): ")
+            typed = typed.strip().strip('"').strip("'")  # "Copy as path" adds quotes
+            if not typed:
+                break
+            if looks_like_esim(typed):
+                return Path(typed), "typed by user"
+            print("That folder doesn't look like eSim (it needs eSim.exe and a tools folder).")
+
     return None, None
 
 
